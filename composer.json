@@ -1,0 +1,11 @@
+{
+    "name": "itssos/libreria-web",
+    "autoload": {
+      "psr-4": {
+        "App\\": "src/"
+      }
+    },
+    "require": {
+      "firebase/php-jwt": "^6.11"
+    }
+  }
