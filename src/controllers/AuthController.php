@@ -2,9 +2,9 @@
 
 namespace App\controllers;
 
-use App\config\Database;
-use App\config\JwtHandler;
-use App\models\User;
+use App\Config\Database;
+use App\Config\JwtHandler;
+use App\Models\User;
 
 class AuthController
 {
@@ -21,13 +21,13 @@ class AuthController
         $p = $_POST['password']      ?? '';
 
         if (!$u || !$e || !$p) {
-            header('Location: /register?error=Faltan+datos');
+            header('Location: /admin/register?error=Faltan+datos');
             exit;
         }
 
         $m = new User($this->db);
         if ($m->exists($u, $e)) {
-            header('Location: /register?error=Usuario+o+email+ya+existe');
+            header('Location: /admin/register?error=Usuario+o+email+ya+existe');
             exit;
         }
 
@@ -35,10 +35,10 @@ class AuthController
         $m->email    = $e;
         $m->setPassword($p);
         if ($m->create()) {
-            header('Location: /login?success=Cuenta+creada');
+            header('Location: /admin/login?success=Cuenta+creada');
             exit;
         }
-        header('Location: /register?error=Error+interno');
+        header('Location: /admin/register?error=Error+interno');
     }
 
     public function login(): void
@@ -47,13 +47,13 @@ class AuthController
         $p = $_POST['password']      ?? '';
 
         if (!$u || !$p) {
-            header('Location: /login?error=Faltan+datos');
+            header('Location: /admin/login?error=Faltan+datos');
             exit;
         }
 
         $m = new User($this->db);
         if (!$m->readByUsername($u) || !password_verify($p, $m->password_hash)) {
-            header('Location: /login?error=Credenciales+inválidas');
+            header('Location: /admin/login?error=Credenciales+inválidas');
             exit;
         }
 
@@ -62,10 +62,11 @@ class AuthController
         setcookie('token', $jwt, [
             'httponly' => true,
             'samesite' => 'Lax',
+            'path'     => '/',
             // 'secure' => true en producción HTTPS
         ]);
 
-        header('Location: /products');
+        header('Location: /');
     }
 
     public function logout(): void
@@ -78,7 +79,20 @@ class AuthController
             'path'     => '/',             // importante: misma ruta que al crearla
         ]);
         // 2) Rediriges al formulario de login
-        header('Location: /login?success=Sesión+cerrada');
+        header('Location: /admin/login?success=Sesión+cerrada');
         exit;
     }
+
+    public function forbidden(): void{
+        http_response_code(403);
+        include __DIR__ . '/../views/error/403.php';
+        exit;
+    }
+
+    public function notFound(): void{
+        http_response_code(404);
+        include __DIR__ . '/../views/error/404.php';
+        exit;
+    }
+
 }

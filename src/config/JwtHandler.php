@@ -7,14 +7,13 @@ use Firebase\JWT\Key;
 use Exception;
 
 class JwtHandler {
-    private string $secret;
+    private static string $secret = JWT_SECRET;
     private string $issuer;
     private int $issuedAt;
     private int $notBefore;
     private int $expire;
 
     public function __construct() {
-        $this->secret   = JWT_SECRET;
         $this->issuer   = JWT_ISSUER;
         $this->issuedAt = time();
         $this->notBefore= $this->issuedAt;
@@ -32,17 +31,23 @@ class JwtHandler {
             'exp'  => $this->expire,
             'sub'  => $userId
         ];
-        return JWT::encode($payload, $this->secret, 'HS256');
+        return JWT::encode($payload, self::$secret, 'HS256');
     }
 
     /**
      * Valida y decodifica un JWT. Devuelve el payload o null.
      */
-    public function validateToken(string $jwt): ?object {
+    public static function validateToken(string $jwt): ?object {
         try {
-            return JWT::decode($jwt, new Key($this->secret, 'HS256'));
+            return JWT::decode($jwt, new Key(self::$secret, 'HS256'));
         } catch (Exception $e) {
             return null;
         }
     }
+
+    public static function getUserId(string $token): ?int {
+        $decoded = self::validateToken($token);
+        return $decoded->sub ?? null;
+    }
+
 }

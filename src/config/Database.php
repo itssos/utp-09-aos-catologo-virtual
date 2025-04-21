@@ -1,40 +1,28 @@
 <?php
-namespace App\config;
+namespace App\Config;
 
 use PDO;
-use PDOException;
 
 class Database {
-    private string $host;
-    private string $db_name;
-    private string $username;
-    private string $password;
-    public ?PDO $conn = null;
-
-    public function __construct() {
-
-        // Asignar valores desde $_ENV, con fallback opcional
-        $this->host     = DB_HOST;
-        $this->db_name  = DB_NAME;
-        $this->username = DB_USER;
-        $this->password = DB_PASS;
-    }
+    /** @var PDO|null */
+    private static $conn = null;
 
     /**
-     * Obtiene la conexión PDO a la base de datos
+     * Retorna la conexión PDO singleton.
      */
-    public function getConnection(): PDO {
-        if ($this->conn === null) {
-            try {
-                $dsn = "mysql:host={$this->host};dbname={$this->db_name};charset=utf8mb4";
-                $this->conn = new PDO($dsn, $this->username, $this->password);
-                $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            } catch (PDOException $e) {
-                http_response_code(500);
-                echo json_encode(["error" => "DB connection failed: " . $e->getMessage()]);
-                exit;
-            }
+    public static function getConnection(): PDO {
+        if (self::$conn === null) {
+            $host = DB_HOST;
+            $db   = DB_NAME;
+            $user = DB_USER;
+            $pass = DB_PASS;
+            $dsn  = "mysql:host={$host};dbname={$db};charset=utf8mb4";
+
+            self::$conn = new PDO($dsn, $user, $pass, [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+            ]);
         }
-        return $this->conn;
+        return self::$conn;
     }
 }

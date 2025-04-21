@@ -1,7 +1,8 @@
 <?php
 
-namespace App\models;
+namespace App\Models;
 
+use App\Config\Database;
 use PDO;
 
 class User {
@@ -12,9 +13,15 @@ class User {
     public string $username;
     public string $email;
     public string $password_hash;
+    public ?string $full_name;
 
-    public function __construct(PDO $db) {
-        $this->conn = $db;
+    /** @var string[] */
+    private ?array $permissions = null;
+
+
+    public function __construct()
+    {
+        $this->conn = Database::getConnection();
     }
 
     /** Verifica si ya existe username o email */
@@ -57,4 +64,54 @@ class User {
         }
         return false;
     }
+
+    /**
+     * Busca un usuario por su ID.
+     */
+    public static function findById(int $id): ?self {
+        $db = Database::getConnection();
+        $stmt = $db->prepare('
+            SELECT user_id, username, email, full_name
+            FROM users
+            WHERE user_id = ?
+        ');
+        $stmt->execute([$id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            return null;
+        }
+        $u = new self();
+        $u->user_id   = (int)$row['user_id'];
+        $u->username  = $row['username'];
+        $u->email     = $row['email'];
+        $u->full_name = $row['full_name'];
+        return $u;
+    }
+
+    /**
+     * Carga los permisos del usuario en memoria.
+     */
+    private function loadPermissions(): void {
+        if ($this->permissions !== null) {
+            return;
+        }
+        $db = Database::getConnection();
+        $stmt = $db->prepare('
+            SELECT p.name
+            FROM permissions p
+            JOIN user_permissions up ON up.permission_id = p.permission_id
+            WHERE up.user_id = ?
+        ');
+        $stmt->execute([$this->user_id]);
+        $this->permissions = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    /**
+     * Verifica si el usuario tiene el permiso dado.
+     */
+    public function hasPermission(string $permName): bool {
+        $this->loadPermissions();
+        return in_array($permName, $this->permissions, true);
+    }
+
 }

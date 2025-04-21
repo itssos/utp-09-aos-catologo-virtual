@@ -1,15 +1,94 @@
-
 <?php include __DIR__ . '/../layouts/header.php'; ?>
-<h2>Catálogo</h2>
-<table border="1" cellpadding="5">
-  <tr><th>ID</th><th>Título</th><th>Precio</th><th>Stock</th></tr>
-  <?php foreach($items as $i): ?>
-  <tr>
-    <td><?= $i['product_id'] ?></td>
-    <td><?= htmlspecialchars($i['title']) ?></td>
-    <td><?= number_format($i['price'],2) ?></td>
-    <td><?= $i['stock_quantity'] ?></td>
-  </tr>
+<div class="products-grid">
+  <?php foreach ($products as $p): ?>
+    <div class="product-card">
+      <div class="card-image">
+        <img src="<?= htmlspecialchars($p->image_url) ?>" alt="<?= htmlspecialchars($p->title) ?>">
+      </div>
+      <div class="card-body">
+        <h3 class="card-title"><?= htmlspecialchars($p->title) ?></h3>
+        <p class="card-price">$<?= number_format($p->price, 2) ?></p>
+        <a href="product.php?id=<?= $p->id ?>" class="card-btn">Ver detalles</a>
+      </div>
+    </div>
   <?php endforeach; ?>
-</table>
+</div>
+
+<style>
+  /* Contenedor responsive */
+  .products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1.5rem;
+    padding: 1rem;
+  }
+
+  /* Tarjeta individual */
+  .product-card {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Imagen de la tarjeta */
+  .card-image img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* Cuerpo de la tarjeta */
+  .card-body {
+    padding: 1rem;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .card-title {
+    font-size: 1.1rem;
+    margin: 0 0 0.5rem;
+    color: #333;
+  }
+
+  .card-price {
+    font-weight: bold;
+    color: #e63946;
+    margin: 0 0 1rem;
+  }
+
+  /* Botón */
+  .card-btn {
+    text-align: center;
+    padding: 0.6rem 1rem;
+    background: #457b9d;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: background 0.2s;
+  }
+
+  .card-btn:hover {
+    background: #1d3557;
+  }
+
+  /* Ajustes para móviles si quieres más separación */
+  @media (max-width: 600px) {
+    .products-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
 <?php include __DIR__ . '/../layouts/footer.php'; ?>
