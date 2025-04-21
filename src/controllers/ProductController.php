@@ -20,7 +20,15 @@ class ProductController
   public function list(): void
   {
     $prod = new Product();
-    $products = $prod->readAll();   // devuelve array asociativo
+    $cat  = new Category();
+    $imgM = new ProductImage();
+    $products = $prod->readAll();
+    foreach ($products as &$product) {
+      $category        = $cat->findById((int)$product->category_id);
+      $product->category = $category->name;
+      $product->images = $imgM->findByProductId($product->product_id);
+    }
+
     include __DIR__ . '/../views/products/list.php';
   }
 

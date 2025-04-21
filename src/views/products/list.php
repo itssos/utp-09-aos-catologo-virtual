@@ -3,7 +3,11 @@
   <?php foreach ($products as $p): ?>
     <div class="product-card">
       <div class="card-image">
-        <img src="<?= htmlspecialchars($p->image_url) ?>" alt="<?= htmlspecialchars($p->title) ?>">
+        <?php if (!empty($p->images)): ?>
+          <img src="<?= htmlspecialchars($p->images[0]->url) ?>" alt="<?= htmlspecialchars($p->images[0]->alt_text ?: $p->title) ?>">
+        <?php else: ?>
+          <img src="<?= NO_IMAGE ?>" alt="Sin imagen" class="thumb">
+        <?php endif; ?>
       </div>
       <div class="card-body">
         <h3 class="card-title"><?= htmlspecialchars($p->title) ?></h3>
@@ -18,7 +22,7 @@
   /* Contenedor responsive */
   .products-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
     gap: 1.5rem;
     padding: 1rem;
   }
@@ -42,7 +46,7 @@
   /* Imagen de la tarjeta */
   .card-image img {
     width: 100%;
-    height: 200px;
+    height: 100%;
     object-fit: cover;
     display: block;
   }

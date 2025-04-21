@@ -123,6 +123,75 @@
   .btn-cancel:hover {
     background: #95a5a6;
   }
+
+  .thumbnails-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 16px;
+  }
+
+  .thumbnail-item {
+    position: relative;
+    width: 150px;
+    height: 150px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s;
+  }
+
+  .thumbnail-item:hover {
+    transform: scale(1.05);
+  }
+
+  .thumbnail-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .delete-icon {
+    top: 8px;
+    right: 8px;
+  }
+
+  .checkbox-wrapper {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: left;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 4px;
+    padding: 4px 6px;
+    transition: background 0.3s;
+    width: 90%;
+  }
+
+  .checkbox-wrapper:hover,
+  .checkbox-wrapper label:hover,
+  .checkbox-wrapper input[type="checkbox"]:hover {
+    background: rgba(255, 255, 255, 1);
+    cursor: pointer;
+  }
+
+  .checkbox-wrapper input[type="checkbox"] {
+    margin: 0;
+    transform: scale(1.2);
+    margin-right: 8px;
+    width: 16px;
+  }
+
+  .checkbox-wrapper label {
+    font-size: 0.9rem;
+    color: #333;
+    user-select: none;
+    margin: 0;
+  }
 </style>
 
 <?php if ($m = getFlash('error')): ?>
@@ -138,22 +207,18 @@
   <input type="hidden" name="product_id" value="<?= $product->product_id ?>">
 
   <!-- Mostrar miniaturas existentes -->
-  <?php if (!empty($product->images)): ?>
-    <div class="image-preview existing">
-      <?php foreach ($product->images as $img): ?>
-        <div class="image-thumb">
-          <img src="<?= htmlspecialchars($img->url) ?>"
-            alt="<?= htmlspecialchars($img->alt_text ?: $product->title) ?>">
-          <label>
-            <input type="checkbox"
-              name="delete_images[]"
-              value="<?= $img->image_id ?>">
-            <i class="fa fa-trash"></i>
-          </label>
-        </div>
-      <?php endforeach; ?>
-    </div>
-  <?php endif; ?>
+  <div class="thumbnails-container">
+    <?php foreach ($product->images as $thumb): ?>
+      <div class="thumbnail-item">
+        <img src="<?= htmlspecialchars($thumb->url) ?>" alt="<?= htmlspecialchars($thumb->alt_text ?? '') ?>">
+
+        <label for="thumb-<?= $thumb->image_id ?>" class="checkbox-wrapper">
+          <input type="checkbox" name="delete_images[]" value="<?= $thumb->image_id ?>" id="thumb-<?= $thumb->image_id ?>">
+          <i class="fa fa-trash"></i> Borrar
+        </label>
+      </div>
+    <?php endforeach; ?>
+  </div>
 
   <label>
     Título

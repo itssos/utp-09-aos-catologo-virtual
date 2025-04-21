@@ -8,6 +8,8 @@ define('JWT_ISSUER',  'http://localhost:8000');
 
 define('BASE_URL', '');
 
+define('NO_IMAGE', '/assets/image/no-image.jpg');
+
 // --------------------------------------------------
 // RUTAS DE LA APLICACIÓN
 // --------------------------------------------------
