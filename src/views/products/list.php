@@ -1,4 +1,5 @@
-<?php include __DIR__ . '/../layouts/header.php'; ?>
+<?php include VIEWS_PATH . 'layouts/header.php'; ?>
+
 <div class="products-grid">
   <?php foreach ($products as $p): ?>
     <div class="product-card">
@@ -95,4 +96,4 @@
   }
 </style>
 
-<?php include __DIR__ . '/../layouts/footer.php'; ?>
+<?php include VIEWS_PATH . 'layouts/footer.php'; ?>

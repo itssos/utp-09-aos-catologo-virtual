@@ -1,117 +1,164 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
-use App\Config\Database;
 use PDO;
+use Exception;
+use JsonSerializable;
 
-class User {
-    private PDO $conn;
-    private string $table = 'users';
+class User implements JsonSerializable
+{
+    private PDO $db;
 
-    public int    $user_id;
-    public string $username;
-    public string $email;
-    public string $password_hash;
-    public ?string $full_name;
+    // Atributos de usuario (columnas)
+    private int $user_id;
+    private string $username;
+    private string $password_hash;
+    private string $email;
+    private ?string $full_name;
+    private string $created_at;
+    private string $updated_at;
 
-    /** @var string[] */
-    private ?array $permissions = null;
-
-
-    public function __construct()
+    public function __construct(PDO $db, array $data = [])
     {
-        $this->conn = Database::getConnection();
-    }
-
-    /** Verifica si ya existe username o email */
-    public function exists(string $username, string $email): bool {
-        $sql = "SELECT 1 FROM {$this->table} WHERE username = :u OR email = :e LIMIT 1";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute([':u'=>$username, ':e'=>$email]);
-        return (bool) $stmt->fetchColumn();
-    }
-
-    /** Hash de contraseña */
-    public function setPassword(string $password): void {
-        $this->password_hash = password_hash($password, PASSWORD_BCRYPT);
-    }
-
-    /** Inserta un nuevo usuario */
-    public function create(): bool {
-        $sql  = "INSERT INTO {$this->table} (username, email, password_hash)
-                 VALUES (:u, :e, :p)";
-        $stmt = $this->conn->prepare($sql);
-        return $stmt->execute([
-            ':u'=>$this->username,
-            ':e'=>$this->email,
-            ':p'=>$this->password_hash
-        ]);
-    }
-
-    /** Carga usuario por username */
-    public function readByUsername(string $username): bool {
-        $sql  = "SELECT * FROM {$this->table} WHERE username = :u LIMIT 1";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute([':u'=>$username]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        if ($row) {
-            $this->user_id       = (int)$row['user_id'];
-            $this->username      = $row['username'];
-            $this->email         = $row['email'];
-            $this->password_hash = $row['password_hash'];
-            return true;
+        $this->db = $db;
+        if ($data) {
+            $this->hydrate($data);
         }
-        return false;
     }
 
-    /**
-     * Busca un usuario por su ID.
-     */
-    public static function findById(int $id): ?self {
-        $db = Database::getConnection();
-        $stmt = $db->prepare('
-            SELECT user_id, username, email, full_name
-            FROM users
-            WHERE user_id = ?
-        ');
-        $stmt->execute([$id]);
+    private function hydrate(array $data): void
+    {
+        $this->user_id       = (int)($data['user_id'] ?? 0);
+        $this->username      = (string)$data['username'];
+        $this->password_hash = (string)$data['password_hash'];
+        $this->email         = (string)$data['email'];
+        $this->full_name     = $data['full_name'] ?? null;
+        $this->created_at    = $data['created_at'];
+        $this->updated_at    = $data['updated_at'];
+    }
+
+    public function jsonSerialize(): array
+    {
+        return [
+            'user_id'     => $this->user_id,
+            'username'    => $this->username,
+            'email'       => $this->email,
+            'full_name'   => $this->full_name,
+            'permissions' => $this->getPermissions(),
+        ];
+    }
+
+    public function getId(): int
+    {
+        return $this->user_id;
+    }
+
+    public function getAll(): array
+    {
+        $stmt = $this->db->query("SELECT * FROM users");
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return array_map(fn($row) => new self($this->db, $row), $rows);
+    }
+
+    public function getById(int $id): self
+    {
+        $stmt = $this->db->prepare("SELECT * FROM users WHERE user_id = :id");
+        $stmt->execute(['id' => $id]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$row) {
-            return null;
+            throw new Exception('Usuario no encontrado');
         }
-        $u = new self();
-        $u->user_id   = (int)$row['user_id'];
-        $u->username  = $row['username'];
-        $u->email     = $row['email'];
-        $u->full_name = $row['full_name'];
-        return $u;
+        return new self($this->db, $row);
     }
 
-    /**
-     * Carga los permisos del usuario en memoria.
-     */
-    private function loadPermissions(): void {
-        if ($this->permissions !== null) {
-            return;
+    public function findByUsername(string $username): self
+    {
+        $stmt = $this->db->prepare("SELECT * FROM users WHERE username = :username");
+        $stmt->execute(['username' => $username]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            throw new Exception('Usuario no encontrado');
         }
-        $db = Database::getConnection();
-        $stmt = $db->prepare('
-            SELECT p.name
-            FROM permissions p
-            JOIN user_permissions up ON up.permission_id = p.permission_id
-            WHERE up.user_id = ?
-        ');
-        $stmt->execute([$this->user_id]);
-        $this->permissions = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        return new self($this->db, $row);
     }
 
-    /**
-     * Verifica si el usuario tiene el permiso dado.
-     */
-    public function hasPermission(string $permName): bool {
-        $this->loadPermissions();
-        return in_array($permName, $this->permissions, true);
+    public function getPasswordHash(): string
+    {
+        return $this->password_hash;
     }
 
+    public function create(array $data): int
+    {
+        if (empty($data['username']) || empty($data['password']) || empty($data['email'])) {
+            throw new Exception('username, password y email son obligatorios');
+        }
+        $hash = password_hash($data['password'], PASSWORD_DEFAULT);
+        $stmt = $this->db->prepare(
+            "INSERT INTO users (username, password_hash, email, full_name) VALUES (:username, :hash, :email, :full_name)"
+        );
+        $stmt->execute([
+            'username'  => $data['username'],
+            'hash'      => $hash,
+            'email'     => $data['email'],
+            'full_name' => $data['full_name'] ?? null,
+        ]);
+        return (int)$this->db->lastInsertId();
+    }
+
+    public function update(int $id, array $data): bool
+    {
+        $fields = [];
+        $params = ['id' => $id];
+        if (isset($data['username'])) {
+            $fields[] = 'username = :username';
+            $params['username'] = $data['username'];
+        }
+        if (!empty($data['password'])) {
+            $fields[] = 'password_hash = :hash';
+            $params['hash'] = password_hash($data['password'], PASSWORD_DEFAULT);
+        }
+        if (isset($data['email'])) {
+            $fields[] = 'email = :email';
+            $params['email'] = $data['email'];
+        }
+        if (array_key_exists('full_name', $data)) {
+            $fields[] = 'full_name = :full_name';
+            $params['full_name'] = $data['full_name'];
+        }
+        if (empty($fields)) {
+            throw new Exception('No hay datos para actualizar');
+        }
+        $sql = "UPDATE users SET " . implode(', ', $fields) . " WHERE user_id = :id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->rowCount() > 0;
+    }
+
+    public function delete(int $id): bool
+    {
+        $stmt = $this->db->prepare("DELETE FROM users WHERE user_id = :id");
+        $stmt->execute(['id' => $id]);
+        return $stmt->rowCount() > 0;
+    }
+
+    public function getPermissions(): array
+    {
+        // Retorna lista de keys (name)
+        $stmt = $this->db->prepare(
+            "SELECT p.name
+             FROM permissions p
+             JOIN user_permissions up ON p.permission_id = up.permission_id
+             WHERE up.user_id = :id"
+        );
+        $stmt->execute(['id' => $this->user_id]);
+        return array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'name');
+    }
+
+    public function hasPermission(string $permKey): bool
+    {
+        return in_array($permKey, $this->getPermissions(), true);
+    }
 }

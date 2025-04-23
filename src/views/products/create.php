@@ -193,6 +193,51 @@
       reader.readAsDataURL(file);
     });
   });
+
+  const form = document.querySelector('.product-form');
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    // Limpiar mensaje de error previo
+    const prevError = document.querySelector('.alert-error');
+    if (prevError) prevError.remove();
+
+    // Construir FormData (incluye archivos)
+    const fd = new FormData(form);
+
+    for (let [key, value] of fd.entries()) {
+    console.log(`${key}:`, value);
+}
+
+    try {
+      const res = await fetch('http://localhost:8001/api/products', {
+        method: 'POST',
+        credentials: 'include',
+        body: fd
+      });
+
+      // Si no es 2xx
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || res.statusText);
+      }
+
+      const json = await res.json();
+      if (json.status !== 'success') {
+        throw new Error(json.message || 'Error al crear el producto');
+      }
+
+      // Redirigir al listado de admin
+      window.location.href = '/admin/productos';
+    } catch (err) {
+      // Mostrar error arriba del form
+      const div = document.createElement('div');
+      div.className = 'alert alert-error';
+      div.textContent = err.message;
+      form.prepend(div);
+      console.error(err);
+    }
+  });
 </script>
 
 <?php include __DIR__ . '/../layouts/footer.php'; ?>

@@ -116,7 +116,7 @@
 
 <h1>Productos</h1>
 
-<?php if (can('create_product')): ?>
+<?php if (can('create_product', $pdo)): ?>
   <p>
     <a href="<?= route('product_create') ?>" class="btn-new">
       <i class="fa fa-plus"></i> Nuevo Producto
@@ -150,27 +150,54 @@
         </td>
         <td><?= $p->product_id ?></td>
         <td><?= htmlspecialchars($p->title) ?></td>
-        <td><?= htmlspecialchars($p->category) ?></td>
+        <td><?= htmlspecialchars($p->category_name) ?></td>
         <td><?= number_format($p->price, 2, ',', '.') ?></td>
         <td><?= $p->stock_quantity ?></td>
         <td>
-          <?php if (can('edit_product')): ?>
-            <a href="<?= route('product_edit') ?>?id=<?= $p->product_id ?>"
+          <?php if (can('edit_product', $pdo)): ?>
+            <a href="<?= route('product_edit') ?>/<?= $p->product_id ?>"
               class="btn-edit">
               <i class="fa fa-edit"></i> Editar
             </a>
           <?php endif; ?>
-          <?php if (can('delete_product')): ?>
-            <form action="<?= route('product_delete') ?>"
-              method="post"
-              style="display:inline"
-              onsubmit="return confirm('¿Eliminar «<?= addslashes($p->title) ?>»?');">
-              <input type="hidden" name="product_id" value="<?= $p->product_id ?>">
-              <button type="submit" class="btn-delete">
-                <i class="fa fa-trash"></i> Eliminar
-              </button>
-            </form>
+
+          <?php if (can('delete_product', $pdo)): ?>
+            <button
+              class="btn-delete"
+              data-id="<?= $p->product_id ?>"
+              onclick="onDeleteProduct(<?= $p->product_id ?>, '<?= addslashes($p->title) ?>')">
+              <i class="fa fa-trash"></i> Eliminar
+            </button>
           <?php endif; ?>
+          <script>
+            async function onDeleteProduct(id, title) {
+              if (!confirm(`¿Eliminar «${title}»?`)) return;
+
+              try {
+                const res = await fetch(`<?= API_BASE_URL ?>/api/products/${id}`, {
+                  method: 'DELETE',
+                  credentials: 'include',
+                  headers: {
+                    'Accept': 'application/json'
+                  }
+                });
+                if (!res.ok) {
+                  const text = await res.text();
+                  throw new Error(text || res.statusText);
+                }
+                const json = await res.json();
+                if (json.status !== 'success') {
+                  throw new Error(json.message || 'Error al eliminar');
+                }
+                // Recarga la página o elimina la fila del DOM:
+                window.location.reload();
+              } catch (err) {
+                console.error(err);
+                alert('Error eliminando producto:\n' + err.message);
+              }
+            }
+          </script>
+
         </td>
       </tr>
     <?php endforeach; ?>

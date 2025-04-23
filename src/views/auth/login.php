@@ -3,11 +3,9 @@
 
 <div class="login-card">
     <h2><i class="fas fa-book-open"></i> Intranet Librería</h2>
-    <?php if (!empty($_GET['error'])): ?>
-        <p id="error-message"><?= htmlspecialchars($_GET['error']) ?></p>
-    <?php endif; ?>
+    <p id="error-message"><?= htmlspecialchars($_GET['error'] ?? '') ?></p>
 
-    <form action="/admin/login" method="post" autocomplete="off">
+    <form id="login-form" autocomplete="off">
         <label>Usuario:
             <input type="text" name="username" placeholder="Tu usuario" required>
         </label>
@@ -18,7 +16,50 @@
     </form>
 </div>
 
+
 <?php include __DIR__ . '/../layouts/footer.php'; ?>
+
+<script>
+    document.getElementById('login-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const errorEl = document.getElementById('error-message');
+        errorEl.textContent = '';
+
+        const form = e.target;
+        const data = {
+            username: form.username.value,
+            password: form.password.value
+        };
+
+        try {
+            const res = await fetch('http://localhost:8001/api/login', {
+                method: 'POST',
+                credentials: 'include', // para que almacene la cookie
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (!res.ok) {
+                // HTTP >=400
+                const text = await res.text();
+                throw new Error(text || res.statusText);
+            }
+
+            const json = await res.json();
+            if (json.status !== 'success') {
+                throw new Error(json.message || 'Error de autenticación');
+            }
+
+            window.location.href = '/admin/productos';
+        } catch (err) {
+            console.error(err);
+            errorEl.textContent = err.message;
+        }
+    });
+</script>
 
 <style>
     /* --- Card Container --- */
@@ -88,11 +129,10 @@
         font-weight: 500;
     }
 
-    main{
+    main {
         display: flex;
         justify-content: center;
         align-items: center;
         height: 90vh;
     }
-
 </style>

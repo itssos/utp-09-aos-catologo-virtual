@@ -26,7 +26,7 @@ class AuthMiddleware
   /**
    * @return User|null  Instancia de User o null si no hay JWT válido.
    */
-  public static function getUser(): ?User
+  public static function getUser($pdo): ?User
   {
     $token = null;
 
@@ -51,6 +51,6 @@ class AuthMiddleware
       return null;
     }
 
-    return User::findById($userId);
+    return (new User($pdo))->getById($userId);
   }
 }

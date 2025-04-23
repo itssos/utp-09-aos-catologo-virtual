@@ -1,98 +1,64 @@
 <?php
 
-namespace App\controllers;
+declare(strict_types=1);
 
-use App\Config\Database;
-use App\Config\JwtHandler;
-use App\Models\User;
+namespace App\Controllers;
+
+use Exception;
 
 class AuthController
 {
-    private $db;
+
     public function __construct()
     {
-        $this->db = (new Database())->getConnection();
+
     }
 
-    public function register(): void
+    public function registerRoutes($router): void
     {
-        $u = trim($_POST['username'] ?? '');
-        $e = trim($_POST['email']    ?? '');
-        $p = $_POST['password']      ?? '';
+        $router->get('/admin/login', fn($p) => $this->showLogin());
+        $router->post('/admin/login', fn($p) => $this->login());
+        $router->get('/admin/logout', fn($p) => $this->logout());
+    }
 
-        if (!$u || !$e || !$p) {
-            header('Location: /admin/register?error=Faltan+datos');
-            exit;
-        }
-
-        $m = new User($this->db);
-        if ($m->exists($u, $e)) {
-            header('Location: /admin/register?error=Usuario+o+email+ya+existe');
-            exit;
-        }
-
-        $m->username = $u;
-        $m->email    = $e;
-        $m->setPassword($p);
-        if ($m->create()) {
-            header('Location: /admin/login?success=Cuenta+creada');
-            exit;
-        }
-        header('Location: /admin/register?error=Error+interno');
+    public function showLogin(): void
+    {
+        header('Content-Type: text/html; charset=utf-8');
+        include VIEWS_PATH . '/auth/login.php';
     }
 
     public function login(): void
     {
-        $u = trim($_POST['username'] ?? '');
-        $p = $_POST['password']      ?? '';
+        header('Content-Type: text/html; charset=utf-8');
+        try {
+            $body = json_decode(file_get_contents('php://input'), true);
+            // Si no vienen JSON, tomamos de $_POST
+            if (!is_array($body)) {
+                $body = $_POST;
+            }
 
-        if (!$u || !$p) {
-            header('Location: /admin/login?error=Faltan+datos');
-            exit;
+            // echo json_encode($body);
+
+            httpRequest('POST', '/api/login', $body);
+            setFlash('success', 'Bienvenido');
+            header('Location: ' . route('home'));
+        } catch (Exception $e) {
+            setFlash('error', $e->getMessage());
+            header('Location: ' . route('login'));
         }
-
-        $m = new User($this->db);
-        if (!$m->readByUsername($u) || !password_verify($p, $m->password_hash)) {
-            header('Location: /admin/login?error=Credenciales+inválidas');
-            exit;
-        }
-
-        $jwt = (new JwtHandler())->generateToken($m->user_id);
-        // guardamos token en cookie segura
-        setcookie('token', $jwt, [
-            'httponly' => true,
-            'samesite' => 'Lax',
-            'path'     => '/',
-            // 'secure' => true en producción HTTPS
-        ]);
-
-        header('Location: /');
+        exit;
     }
 
     public function logout(): void
     {
-        // 1) Expiramos la cookie:
-        setcookie('token', '', [
-            'expires'  => time() - 3600,   // hace que el navegador la borre
-            'httponly' => true,
-            'samesite' => 'Lax',
-            'path'     => '/',             // importante: misma ruta que al crearla
-        ]);
-        // 2) Rediriges al formulario de login
-        header('Location: /admin/login?success=Sesión+cerrada');
+        header('Content-Type: text/html; charset=utf-8');
+        try {
+            httpRequest('POST', '/api/logout');
+            setFlash('success', 'Sesión cerrada');
+        } catch (Exception $e) {
+            setFlash('error', 'No se pudo cerrar sesión');
+        }
+        header('Location: ' . route('login'));
         exit;
     }
-
-    public function forbidden(): void{
-        http_response_code(403);
-        include __DIR__ . '/../views/error/403.php';
-        exit;
-    }
-
-    public function notFound(): void{
-        http_response_code(404);
-        include __DIR__ . '/../views/error/404.php';
-        exit;
-    }
-
 }

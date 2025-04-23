@@ -27,21 +27,21 @@
             <nav>
                 <a href="<?= route('home') ?>">Inicio</a>
 
-                <?php if (!isAuth()): ?>
+                <?php // if (!isAuth()): ?>
                     <a href="<?= route('login') ?>">Intranet</a>
-                <?php endif; ?>
+                <?php // endif; ?>
 
-                <?php if (can('create_user')): ?>
+                <?php // if (can('create_user')): ?>
                     <a href="<?= route('register') ?>">Registrar usuario</a>
-                <?php endif; ?>
+                <?php // endif; ?>
 
-                <?php if (can('view_product')): ?>
+                <?php //if (can('view_product')): ?>
                     <a href="<?= route('product_store') ?>">Catalogo</a>
-                <?php endif; ?>
+                <?php //endif; ?>
 
-                <?php if (isAuth()): ?>
+                <?php // if (isAuth()): ?>
                     <a href="<?= route('logout') ?>">Salir</a>
-                <?php endif; ?>
+                <?php // endif; ?>
             </nav>
         </div>
     </header>

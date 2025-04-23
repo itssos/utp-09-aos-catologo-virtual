@@ -199,7 +199,7 @@
 <?php endif; ?>
 
 <form method="POST"
-  action="<?= route('product_update') ?>"
+  action="<?= route('product_update') . "/" . $product->product_id ?>"
   class="product-form"
   enctype="multipart/form-data">
 
@@ -300,6 +300,63 @@
       };
       reader.readAsDataURL(file);
     });
+  });
+
+  document.querySelector('.product-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const form = e.target;
+    const id = form.product_id.value;
+    const errorContainer = document.querySelector('.alert-error');
+    if (errorContainer) errorContainer.remove();
+
+    // Recoge los campos del formulario (sin archivos)
+    const payload = {
+      title: form.title.value,
+      category_id: parseInt(form.category_id.value, 10),
+      price: parseFloat(form.price.value),
+      stock_quantity: parseInt(form.stock_quantity.value, 10),
+      isbn: form.isbn.value || null,
+      publication_date: form.publication_date.value || null,
+      description: form.description.value || '',
+      // recoge IDs de imágenes marcadas para borrar
+      delete_images: Array.from(form.querySelectorAll('input[name="delete_images[]"]:checked'))
+        .map(cb => parseInt(cb.value, 10))
+    };
+
+    console.log(payload);
+    
+
+    try {
+      const res = await fetch(`http://localhost:8001/api/products/${id}`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || res.statusText);
+      }
+
+      const json = await res.json();
+      if (json.status !== 'success') {
+        throw new Error(json.message || 'Error al actualizar el producto');
+      }
+
+      // Redirige de vuelta al listado de administración
+      window.location.href = '/admin/productos';
+    } catch (err) {
+      console.error(err);
+      // Muestra el error sobre el formulario
+      const div = document.createElement('div');
+      div.className = 'alert alert-error';
+      div.textContent = err.message;
+      form.prepend(div);
+    }
   });
 </script>
 
